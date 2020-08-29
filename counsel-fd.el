@@ -27,9 +27,28 @@
 ;;; Code:
 (require 'counsel)
 
-(defvar counsel-fd-command "fd --hidden --color never "
-  "Base command for fd.")
+(defgroup counsel-fd nil
+  "Settings for counsel-fd."
+  :group 'tools
+  :group 'external)
 
+(defcustom counsel-fd-command "fd --hidden --color never "
+  "Base command for fd."
+  :type 'string
+  :group 'counsel-fd)
+
+(defcustom counsel-fd-excludes '("*.git")
+  "List of excluded directories."
+  :type '(repeat string)
+  :group 'counsel-fd)
+
+(defun counsel-fd--fd-cmd ()
+  "Create fd shell command string."
+  (let ((cmd counsel-fd-command))
+    (seq-each (lambda (e)
+                (setq cmd (format "%s --exclude \"%s\"" cmd e)))
+              counsel-fd-excludes)
+    cmd))
 
 (defun counsel-fd-dired-jump (&optional initial-input initial-directory)
   "Jump to a directory (in dired) below the current directory.
@@ -45,7 +64,7 @@ INITIAL-DIRECTORY, if non-nil, is used as the root directory for search."
     (ivy-read "Directory: "
               (split-string
                (shell-command-to-string
-                (concat counsel-fd-command "--type d --exclude '*.git'"))
+                (concat (counsel-fd--fd-cmd) " --type d "))
                "\n" t)
               :initial-input initial-input
               :action (lambda (d) (dired-jump nil (expand-file-name d)))
@@ -66,7 +85,7 @@ INITIAL-DIRECTORY, if non-nil, is used as the root directory for search."
     (ivy-read "File: "
               (split-string
                (shell-command-to-string
-                (concat counsel-fd-command "--type f --exclude '*.git'"))
+                (concat (counsel-fd--fd-cmd) " --type f "))
                "\n" t)
               :initial-input initial-input
               :action (lambda (d) (find-file (expand-file-name d)))
